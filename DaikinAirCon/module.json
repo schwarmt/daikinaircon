@@ -1,0 +1,12 @@
+{
+    "id": "{317205AB-6DFE-F899-1F59-FB1C6BBB4C58}",
+    "name": "DaikinAirCon",
+    "type": 3,
+    "vendor": "Daikin",
+    "aliases": [],
+    "parentRequirements": [],
+    "childRequirements": [],
+    "implemented": [],
+    "prefix": "DAC",
+    "url": "https://github.com/schwarmt/daikinaircon"
+}

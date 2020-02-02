@@ -1,0 +1,8 @@
+{
+    "translations": {
+        "de": {
+            "IP": "IP-Adresse der Klimaanlage",
+            "Update interval": "Aktualisierungs-Intervall in Sekunden"
+        }
+    }
+}
