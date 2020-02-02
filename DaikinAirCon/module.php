@@ -318,7 +318,11 @@
 
         public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
         {
-            echo ("MessageSink: TS:$TimeStamp - SenderID: $SenderID  - Message: $Message - Data: $Data");
+            echo ("MessageSink: TS:$TimeStamp - SenderID: $SenderID  - Message: $Message - Data: \n");
+            foreach($Data as $currData)
+            {
+                echo $currData."\n";
+            }
            // if (GetValue($this->GetIDForIdent('Active'))) {
            //     if (($Data[0] < $this->ReadPropertyFloat('BorderValue')) && (GetValue($this->GetIDForIdent('Status')) == 1) && ($this->GetBuffer('StatusBuffer') == 'Running')) {
            //         $this->SetTimerInterval('CheckIfDoneTimer', $this->ReadPropertyInteger('Period') * 1000);
