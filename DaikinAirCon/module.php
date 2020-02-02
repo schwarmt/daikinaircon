@@ -89,7 +89,7 @@
                 case 'FanRate':
                 case 'FanMode':
                 case 'TargetTemperature':
-                    SetValue($this->GetIDForIdent('Power'), $Value);
+                    SetValue($this->GetIDForIdent($Ident), $Value);
                     $this->SendCommand();
                     break;
                 case 'Active':
@@ -182,9 +182,9 @@
                     'content' => http_build_query($data)
                 )
             );
-            //echo http_build_query($data);
-            //echo "\n";
-            //var_dump($options);
+            echo http_build_query($data);
+            echo "\n";
+            var_dump($options);
             $content = http_build_query($data);
             $context  = stream_context_create($options);
             $result = file_get_contents("$url?$content", false, $context);
