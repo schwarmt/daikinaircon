@@ -57,6 +57,13 @@
             $this->RegisterVariableBoolean('Active', $this->Translate('Active'), '~Switch');
             $this->EnableAction('Active');
 
+            $this->RegisterMessage($this->GetIDForIdent('FanDirection'), VM_UPDATE);
+            $this->RegisterMessage($this->GetIDForIdent('FanRate'), VM_UPDATE);
+            $this->RegisterMessage($this->GetIDForIdent('FanMode'), VM_UPDATE);
+            $this->RegisterMessage($this->GetIDForIdent('Power'), VM_UPDATE);
+            $this->RegisterMessage($this->GetIDForIdent('TargetTemperature'), VM_UPDATE);
+            $this->RegisterMessage($this->GetIDForIdent('TargetHumidity'), VM_UPDATE);
+
 		}
 
 		public function Destroy()
@@ -83,6 +90,7 @@
 
         public function RequestAction($Ident, $Value)
         {
+            echo "RequestAction";
             switch ($Ident) {
                 case 'Power':
                 case 'FanDirection':
@@ -307,4 +315,21 @@
             }
 
         }
+
+        public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
+        {
+            echo ("MessageSink: TS:$TimeStamp - SenderID: $SenderID  - Message: $Message - Data: $Data");
+           // if (GetValue($this->GetIDForIdent('Active'))) {
+           //     if (($Data[0] < $this->ReadPropertyFloat('BorderValue')) && (GetValue($this->GetIDForIdent('Status')) == 1) && ($this->GetBuffer('StatusBuffer') == 'Running')) {
+           //         $this->SetTimerInterval('CheckIfDoneTimer', $this->ReadPropertyInteger('Period') * 1000);
+           //         $this->SetBuffer('StatusBuffer', 'Done');
+           //     } elseif ($Data[0] > $this->ReadPropertyFloat('BorderValue')) {
+           //         SetValue($this->GetIDForIdent('Status'), 1);
+           //         $this->SetTimerInterval('CheckIfDoneTimer', 0);
+           //         $this->SetBuffer('StatusBuffer', 'Running');
+           //     }
+          //  }
+        }
+
+
 	}
