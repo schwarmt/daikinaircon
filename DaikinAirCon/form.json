@@ -12,5 +12,9 @@
             "onClick": "DAC_Send($id, $IP);"
         }
     ],
-    "status": []
+    "status": [
+        { "code": 102, "icon": "active", "caption": "OK!" },
+        { "code": 104, "icon": "inactive", "caption": "not active" },
+        { "code": 200, "icon": "error", "caption": "Error!" }
+    ]
 }
