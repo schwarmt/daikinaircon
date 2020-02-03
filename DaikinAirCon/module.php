@@ -53,8 +53,12 @@
             $this->RegisterVariableBoolean('Power', $this->Translate('Power'), '~Switch');
             $this->RegisterVariableFloat('TargetTemperature', $this->Translate('TargetTemperature'), '~Temperature');
             $this->RegisterVariableFloat('TargetHumidity', $this->Translate('TargetHumidity'), '~Humidity.F');
-
             $this->RegisterVariableBoolean('Active', $this->Translate('Active'), '~Switch');
+            $this->EnableAction('FanDirection');
+            $this->EnableAction('FanRate');
+            $this->EnableAction('FanMode');
+            $this->EnableAction('TargetTemperature');
+            $this->EnableAction('TargetHumidity');
             $this->EnableAction('Active');
 
             //$this->RegisterMessage($this->GetIDForIdent('FanDirection'), VM_UPDATE);
