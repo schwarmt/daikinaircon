@@ -57,12 +57,12 @@
             $this->RegisterVariableBoolean('Active', $this->Translate('Active'), '~Switch');
             $this->EnableAction('Active');
 
-            $this->RegisterMessage($this->GetIDForIdent('FanDirection'), VM_UPDATE);
-            $this->RegisterMessage($this->GetIDForIdent('FanRate'), VM_UPDATE);
-            $this->RegisterMessage($this->GetIDForIdent('FanMode'), VM_UPDATE);
-            $this->RegisterMessage($this->GetIDForIdent('Power'), VM_UPDATE);
-            $this->RegisterMessage($this->GetIDForIdent('TargetTemperature'), VM_UPDATE);
-            $this->RegisterMessage($this->GetIDForIdent('TargetHumidity'), VM_UPDATE);
+            //$this->RegisterMessage($this->GetIDForIdent('FanDirection'), VM_UPDATE);
+            //$this->RegisterMessage($this->GetIDForIdent('FanRate'), VM_UPDATE);
+            //$this->RegisterMessage($this->GetIDForIdent('FanMode'), VM_UPDATE);
+            //$this->RegisterMessage($this->GetIDForIdent('Power'), VM_UPDATE);
+            //$this->RegisterMessage($this->GetIDForIdent('TargetTemperature'), VM_UPDATE);
+            //$this->RegisterMessage($this->GetIDForIdent('TargetHumidity'), VM_UPDATE);
 
 		}
 
@@ -98,6 +98,7 @@
                 case 'FanMode':
                 case 'TargetTemperature':
                     SetValue($this->GetIDForIdent($Ident), $Value);
+                    echo "Request Action started\n";
                     $this->SendCommand();
                     break;
                 case 'Active':
