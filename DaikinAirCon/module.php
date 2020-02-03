@@ -46,7 +46,6 @@
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 7, $this->Translate('auto'), 'Gear', 255);
             }
 
-
             $this->RegisterVariableInteger('FanDirection', $this->Translate('FanDirection'), 'DaikinAirCon.FanDirection');
             $this->RegisterVariableInteger('FanRate', $this->Translate('FanRate'), 'DaikinAirCon.FanRate');
             $this->RegisterVariableInteger('FanMode', $this->Translate('FanMode'), 'DaikinAirCon.FanMode');
@@ -57,17 +56,10 @@
             $this->EnableAction('FanDirection');
             $this->EnableAction('FanRate');
             $this->EnableAction('FanMode');
+            $this->EnableAction('Power');
             $this->EnableAction('TargetTemperature');
             $this->EnableAction('TargetHumidity');
             $this->EnableAction('Active');
-
-            //$this->RegisterMessage($this->GetIDForIdent('FanDirection'), VM_UPDATE);
-            //$this->RegisterMessage($this->GetIDForIdent('FanRate'), VM_UPDATE);
-            //$this->RegisterMessage($this->GetIDForIdent('FanMode'), VM_UPDATE);
-            //$this->RegisterMessage($this->GetIDForIdent('Power'), VM_UPDATE);
-            //$this->RegisterMessage($this->GetIDForIdent('TargetTemperature'), VM_UPDATE);
-            //$this->RegisterMessage($this->GetIDForIdent('TargetHumidity'), VM_UPDATE);
-
 		}
 
 		public function Destroy()
@@ -81,9 +73,16 @@
 			//Never delete this line!
 			parent::ApplyChanges();
 
-            if($this->ReadPropertyString('IP') <> '' && $this->ReadPropertyInteger('Period')>0)
+            if(('' != $this->ReadPropertyString('IP')) && ($this->ReadPropertyInteger('Period') > 0))
             {
+                // hier fehlt noch Prüfung
+                $this->SetBuffer('StatusBuffer', 'active');
                 $this->SetTimerInterval('UpdateData', $this->ReadPropertyInteger('Period') * 1000);
+            }
+            else{
+                // Parameter nicht vollständig
+                $this->SetBuffer('StatusBuffer', 'inactive');
+                $this->SetTimerInterval('UpdateData', 0);
             }
 		}
 
@@ -112,6 +111,38 @@
                     throw new Exception('Invalid Ident');
             }
         }
+
+        public function SetFanDirection(integer $fanDirection)
+        {
+            SetValue($this->GetIDForIdent('FanDirection'), $fanDirection);
+            $this->SendCommand();
+        }
+        public function SetFanRate(integer $fanRate)
+        {
+            SetValue($this->GetIDForIdent('FanRate'), $fanRate);
+            $this->SendCommand();
+        }
+        public function SetFanMode(integer $fanMode)
+        {
+            SetValue($this->GetIDForIdent('FanMode'), $fanMode);
+            $this->SendCommand();
+        }
+        public function SetPower(bool $power)
+        {
+            SetValue($this->GetIDForIdent('Power'), $power);
+            $this->SendCommand();
+        }
+        public function SetTargetTemperature(float $targetTemperature)
+        {
+            SetValue($this->GetIDForIdent('TargetTemperature'), $targetTemperature);
+            $this->SendCommand();
+        }
+        public function SetTargetHumidity(integer $targetHumidity)
+        {
+            SetValue($this->GetIDForIdent('TargetTemperature'), $targetHumidity);
+            $this->SendCommand();
+        }
+
         public function SetActive(bool $Active)
         {
             if ($this->ReadPropertyString('IP') == '') {
@@ -141,73 +172,72 @@
 
         public function SendCommand()
         {
-            $ip = $this->ReadPropertyString('IP');
+            if($this->GetBuffer('StatusBuffer') == 'active'){
+                $ip = $this->ReadPropertyString('IP');
+                $url = "http://$ip/aircon/set_control_info";
+                $power = GetValueBoolean($this->GetIDForIdent('Power'));
+                $mode = GetValueInteger($this->GetIDForIdent('FanMode'));
+                $fanspeed = GetValueInteger($this->GetIDForIdent('FanRate'));
+                $fandir = GetValueInteger($this->GetIDForIdent('FanDirection'));
+                $ttemp = GetValueFloat($this->GetIDForIdent('TargetTemperature'));
+                $thum = GetValueFloat($this->GetIDForIdent('TargetHumidity'));
 
-            $url = "http://$ip/aircon/set_control_info";
+                if ( $power ) {
+                    $power = '1';
+                } else {
+                    $power = '0';
+                }
 
+                switch ( $fanspeed ) {
+                    case 0:
+                        $fanspeed = 'A';
+                        break;
+                    case 1:
+                        $fanspeed = 'B';
+                        break;
+                    case 2:
+                        $fanspeed = '3';
+                        break;
+                    case 3:
+                        $fanspeed = '4';
+                        break;
+                    case 4:
+                        $fanspeed = '5';
+                        break;
+                    case 5:
+                        $fanspeed = '6';
+                        break;
+                    case 6:
+                        $fanspeed = '7';
+                        break;
+                }
 
-            $power = GetValueBoolean($this->GetIDForIdent('Power'));
-            $mode = GetValueInteger($this->GetIDForIdent('FanMode'));
-            $fanspeed = GetValueInteger($this->GetIDForIdent('FanRate'));
-            $fandir = GetValueInteger($this->GetIDForIdent('FanDirection'));
-            $ttemp = GetValueFloat($this->GetIDForIdent('TargetTemperature'));
-            $thum = GetValueFloat($this->GetIDForIdent('TargetHumidity'));
+                $data = array('pow' => strval($power), 'mode' => strval($mode), 'stemp' => strval($ttemp), 'shum' => '0', 'f_rate' => strval($fanspeed), 'f_dir' => strval($fandir));
+                //http://10.111.40.191/aircon/set_control_info?pow=1&mode=1&stemp=26&shum=0&f_rate=B&f_dir=3
+                // use key 'http' even if you send the request to https://...
+                $options = array(
+                    'http' => array(
+                        // 'header'  => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0\r\n",
+                        'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
+                        'method'  => 'GET',
+                        //'content' => 'pow=1&mode=1&stemp=26&shum=0&f_rate=B&f_dir=3',
+                        'content' => http_build_query($data)
+                    )
+                );
+                echo http_build_query($data);
+                echo "\n";
+                var_dump($options);
+                $content = http_build_query($data);
+                $context  = stream_context_create($options);
+                $result = file_get_contents("$url?$content", false, $context);
 
-            if ( $power ) {
-                $power = '1';
-            } else {
-                $power = '0';
+                //$result = file_get_contents($url, false, $context);
+                //$result = file_get_contents("http://10.111.40.191/aircon/set_control_info?", false, $context);
+                //$result = file_get_contents("http://10.111.40.191/aircon/set_control_info?pow=0&mode=1&stemp=21&shum=0&f_rate=B&f_dir=3", false, $context);
+                //var_dump($data);
+                //echo "\n";
+                //var_dump($result);
             }
-
-            switch ( $fanspeed ) {
-                case 0:
-                    $fanspeed = 'A';
-                    break;
-                case 1:
-                    $fanspeed = 'B';
-                    break;
-                case 2:
-                    $fanspeed = '3';
-                    break;
-                case 3:
-                    $fanspeed = '4';
-                    break;
-                case 4:
-                    $fanspeed = '5';
-                    break;
-                case 5:
-                    $fanspeed = '6';
-                    break;
-                case 6:
-                    $fanspeed = '7';
-                    break;
-            }
-
-            $data = array('pow' => strval($power), 'mode' => strval($mode), 'stemp' => strval($ttemp), 'shum' => '0', 'f_rate' => strval($fanspeed), 'f_dir' => strval($fandir));
-            //http://10.111.40.191/aircon/set_control_info?pow=1&mode=1&stemp=26&shum=0&f_rate=B&f_dir=3
-            // use key 'http' even if you send the request to https://...
-            $options = array(
-                'http' => array(
-                    // 'header'  => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0\r\n",
-                    'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-                    'method'  => 'GET',
-                    //'content' => 'pow=1&mode=1&stemp=26&shum=0&f_rate=B&f_dir=3',
-                    'content' => http_build_query($data)
-                )
-            );
-            echo http_build_query($data);
-            echo "\n";
-            var_dump($options);
-            $content = http_build_query($data);
-            $context  = stream_context_create($options);
-            $result = file_get_contents("$url?$content", false, $context);
-
-            //$result = file_get_contents($url, false, $context);
-            //$result = file_get_contents("http://10.111.40.191/aircon/set_control_info?", false, $context);
-            //$result = file_get_contents("http://10.111.40.191/aircon/set_control_info?pow=0&mode=1&stemp=21&shum=0&f_rate=B&f_dir=3", false, $context);
-            //var_dump($data);
-            //echo "\n";
-            //var_dump($result);
         }
 
         public function UpdateData()
