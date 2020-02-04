@@ -17,7 +17,7 @@
 
             if (!IPS_VariableProfileExists('DaikinAirCon.FanDirection')) {
                 IPS_CreateVariableProfile('DaikinAirCon.FanDirection', 1);
-                IPS_SetVariableProfileValues('DaikinAirCon.FanDirection', 0, 3, 1);
+                IPS_SetVariableProfileValues('DaikinAirCon.FanDirection', 0, 0, 0);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanDirection', 0, $this->Translate('off'), '', 65280);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanDirection', 1, $this->Translate('swingVertical'), '', 16776960);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanDirection', 2, $this->Translate('swingHorizontal'), '', 16744448);
@@ -26,7 +26,7 @@
 
             if (!IPS_VariableProfileExists('DaikinAirCon.FanRate')) {
                 IPS_CreateVariableProfile('DaikinAirCon.FanRate', 1);
-                IPS_SetVariableProfileValues('DaikinAirCon.FanRate', 0, 6, 1);
+                IPS_SetVariableProfileValues('DaikinAirCon.FanRate', 0, 0, 0);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanRate', 0, $this->Translate('auto'), '', 16776960);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanRate', 1, $this->Translate('indoorUnitQuiet'), '', 65280);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanRate', 2, $this->Translate('low'), '', 16744576);
@@ -38,7 +38,7 @@
 
             if (!IPS_VariableProfileExists('DaikinAirCon.FanMode')) {
                 IPS_CreateVariableProfile('DaikinAirCon.FanMode', 1);
-                IPS_SetVariableProfileValues('DaikinAirCon.FanMode', 2, 7, 1);
+                IPS_SetVariableProfileValues('DaikinAirCon.FanMode', 0, 0, 0);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 2, $this->Translate('dry'), 'Drops', 32896);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 3, $this->Translate('cool'), 'Snowflake', 65535);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 4, $this->Translate('heat'), 'Flame', 16711680);
@@ -50,15 +50,15 @@
             $this->RegisterVariableInteger('FanRate', $this->Translate('FanRate'), 'DaikinAirCon.FanRate');
             $this->RegisterVariableInteger('FanMode', $this->Translate('FanMode'), 'DaikinAirCon.FanMode');
             $this->RegisterVariableBoolean('Power', $this->Translate('Power'), '~Switch');
-            $this->RegisterVariableFloat('TargetTemperature', $this->Translate('TargetTemperature'), '~Temperature');
-            $this->RegisterVariableFloat('TargetHumidity', $this->Translate('TargetHumidity'), '~Humidity.F');
+            $this->RegisterVariableFloat('TargetTemperature', $this->Translate('TargetTemperature'), '~Temperature.Room');
+            //$this->RegisterVariableFloat('TargetHumidity', $this->Translate('TargetHumidity'), '~Humidity.F');
             $this->RegisterVariableBoolean('Active', $this->Translate('Active'), '~Switch');
             $this->EnableAction('FanDirection');
             $this->EnableAction('FanRate');
             $this->EnableAction('FanMode');
             $this->EnableAction('Power');
             $this->EnableAction('TargetTemperature');
-            $this->EnableAction('TargetHumidity');
+            //$this->EnableAction('TargetHumidity');
             $this->EnableAction('Active');
 		}
 
@@ -146,8 +146,6 @@
         public function SetActive(bool $Active)
         {
             if ($this->ReadPropertyString('IP') == '') {
-                SetValue($this->GetIDForIdent('Status'), 0);
-
                 //Modul Deaktivieren
                 SetValue($this->GetIDForIdent('Active'), false);
                 echo 'No variable selected';
@@ -211,32 +209,17 @@
                         $fanspeed = '7';
                         break;
                 }
-
                 $data = array('pow' => strval($power), 'mode' => strval($mode), 'stemp' => strval($ttemp), 'shum' => '0', 'f_rate' => strval($fanspeed), 'f_dir' => strval($fandir));
-                //http://10.111.40.191/aircon/set_control_info?pow=1&mode=1&stemp=26&shum=0&f_rate=B&f_dir=3
-                // use key 'http' even if you send the request to https://...
                 $options = array(
                     'http' => array(
-                        // 'header'  => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0\r\n",
                         'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
                         'method'  => 'GET',
-                        //'content' => 'pow=1&mode=1&stemp=26&shum=0&f_rate=B&f_dir=3',
                         'content' => http_build_query($data)
                     )
                 );
-                echo http_build_query($data);
-                echo "\n";
-                var_dump($options);
                 $content = http_build_query($data);
                 $context  = stream_context_create($options);
-                $result = file_get_contents("$url?$content", false, $context);
-
-                //$result = file_get_contents($url, false, $context);
-                //$result = file_get_contents("http://10.111.40.191/aircon/set_control_info?", false, $context);
-                //$result = file_get_contents("http://10.111.40.191/aircon/set_control_info?pow=0&mode=1&stemp=21&shum=0&f_rate=B&f_dir=3", false, $context);
-                //var_dump($data);
-                //echo "\n";
-                //var_dump($result);
+                file_get_contents("$url?$content", false, $context);
             }
         }
 
@@ -252,7 +235,14 @@
             echo $result;
 
             $data = explode(",", $result);
-
+            $values = array();
+            foreach ($data as $field)
+            {
+                preg_match('/([^\=])*\=(.*)/', $data, $matches);
+                $values[$matches[1]]=$matches[2];
+            }
+            print "Ergebnis:";
+            print_r($values);
             //echo $data[0]; //ret=       Daten Gültig
             //echo $data[1]; //pow=       Anlage AN
             //echo $data[2]; //mode=      Modus
