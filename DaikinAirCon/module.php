@@ -60,6 +60,7 @@
             $this->EnableAction('TargetTemperature');
             //$this->EnableAction('TargetHumidity');
             $this->EnableAction('Active');
+            $this->SetBuffer('StatusBuffer', 'inactive');
 		}
 
 		public function Destroy()
