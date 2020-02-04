@@ -43,6 +43,7 @@
             if (!IPS_VariableProfileExists('DaikinAirCon.FanMode')) {
                 IPS_CreateVariableProfile('DaikinAirCon.FanMode', 1);
                 IPS_SetVariableProfileValues('DaikinAirCon.FanMode', 0, 0, 0);
+                IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 0, $this->Translate('auto'), 'Gear', 255);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 2, $this->Translate('dry'), 'Drops', 32896);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 3, $this->Translate('cool'), 'Snowflake', 65535);
                 IPS_SetVariableProfileAssociation('DaikinAirCon.FanMode', 4, $this->Translate('heat'), 'Flame', 16711680);
