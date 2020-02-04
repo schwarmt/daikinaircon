@@ -1,6 +1,11 @@
 <?php
 	class DaikinAirCon extends IPSModule {
 
+	    const STATUS_ACTIVE = 102;
+	    const STATUS_INACTIVE = 104;
+	    const STATUS_ERROR = 200;
+
+
 		public function Create()
 		{
 			//Never delete this line!
@@ -58,7 +63,8 @@
             $this->EnableAction('Power');
             $this->EnableAction('TargetTemperature');
             $this->EnableAction('Active');
-            $this->SetBuffer('StatusBuffer', 'inactive');
+            $this->SetStatus(self::STATUS_INACTIVE);
+            //$this->SetBuffer('StatusBuffer', 'inactive');
 		}
 
 		public function Destroy()
@@ -66,6 +72,8 @@
 			//Never delete this line!
 			parent::Destroy();
 		}
+
+		private function UpdateStatus(string $status)
 
 		public function ApplyChanges()
 		{
@@ -144,20 +152,24 @@
                 if ($active) {
                     $success = $this->UpdateData();
                     if ($success == true) {
-                        $this->SetBuffer('StatusBuffer', 'active');
+                        $this->UpdateStatus(self::STATUS_ACTIVE);
+                        //$this->SetBuffer('StatusBuffer', 'active');
                         $this->SetTimerInterval('UpdateData', $this->ReadPropertyInteger('Period') * 1000);
                     } else {
-                        $this->SetBuffer('StatusBuffer', 'error');
+                        $this->UpdateStatus(self::STATUS_ERROR);
+                        //$this->SetBuffer('StatusBuffer', 'error');
                         $this->SetTimerInterval('UpdateData', 0);
                     }
 
                 } else {
-                    $this->SetBuffer('StatusBuffer', 'inactive');
+                    $this->UpdateStatus(self::STATUS_INACTIVE);
+                   // $this->SetBuffer('StatusBuffer', 'inactive');
                     $this->SetTimerInterval('UpdateData', 0);
                 }
             } else {
                 // Parameter nicht vollständig
-                $this->SetBuffer('StatusBuffer', 'inactive');
+                $this->UpdateStatus(self::STATUS_INACTIVE);
+                //$this->SetBuffer('StatusBuffer', 'inactive');
                 $this->SetTimerInterval('UpdateData', 0);
             }
             return $success;
@@ -165,7 +177,8 @@
 
         public function SendCommand()
         {
-            if($this->GetBuffer('StatusBuffer') == 'active'){
+            if($this->GetStatus() == self::STATUS_ACTIVE){
+//            if($this->GetBuffer('StatusBuffer') == 'active'){
                 $ip = $this->ReadPropertyString('IP');
                 $url = "http://$ip/aircon/set_control_info";
                 $fanRatesRev = array(
@@ -198,7 +211,7 @@
             $values = array();
             foreach ($data as $field)
             {
-                preg_match('/([^\=])*\=(.*)/', $field, $matches);
+                preg_match('/([^=])*=(.*)/', $field, $matches);
                 $values[$matches[1]]=$matches[2];
             }
             print "Ergebnis:";
@@ -208,13 +221,13 @@
 
         public function UpdateData()
         {
-            $values = readDaikinACStatus("get_sensor_info");
+            $values = $this->readDaikinACStatus("get_sensor_info");
             if($values["ret"]=="OK")
             {
                 SetValue($this->GetIDForIdent('InsideTemperature'), floatval($values["htemp"]));
             };
 
-            $values = readDaikinACStatus("get_control_info");
+            $values = $this->readDaikinACStatus("get_control_info");
             if($values["ret"]=="OK")
             {
                 SetValue($this->GetIDForIdent('Power'), intval($values["pow"]));
@@ -229,7 +242,7 @@
                 SetValue($this->GetIDForIdent('FanDirection'), intval($values["f_dir"]));
                 return true;
             } else {
-                echo false;
+                return false;
             }
         }
 	}
