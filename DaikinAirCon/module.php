@@ -8,13 +8,12 @@
 
             //Properties
             $this->RegisterPropertyString('IP', 0);
-            $this->RegisterPropertyInteger('Period', 15);
+            $this->RegisterPropertyInteger('Period', 120);
 
             //Timer
             $this->RegisterTimer('UpdateData', 0, 'DAC_UpdateData($_IPS[\'TARGET\']);');
 
             // Variable Profiles
-
             if (!IPS_VariableProfileExists('DaikinAirCon.FanDirection')) {
                 IPS_CreateVariableProfile('DaikinAirCon.FanDirection', 1);
                 IPS_SetVariableProfileValues('DaikinAirCon.FanDirection', 0, 0, 0);
@@ -51,14 +50,13 @@
             $this->RegisterVariableInteger('FanMode', $this->Translate('FanMode'), 'DaikinAirCon.FanMode');
             $this->RegisterVariableBoolean('Power', $this->Translate('Power'), '~Switch');
             $this->RegisterVariableFloat('TargetTemperature', $this->Translate('TargetTemperature'), '~Temperature.Room');
-            //$this->RegisterVariableFloat('TargetHumidity', $this->Translate('TargetHumidity'), '~Humidity.F');
+            $this->RegisterVariableFloat('InsideTemperature', $this->Translate('InsideTemperature'), '~Temperature.Room');
             $this->RegisterVariableBoolean('Active', $this->Translate('Active'), '~Switch');
             $this->EnableAction('FanDirection');
             $this->EnableAction('FanRate');
             $this->EnableAction('FanMode');
             $this->EnableAction('Power');
             $this->EnableAction('TargetTemperature');
-            //$this->EnableAction('TargetHumidity');
             $this->EnableAction('Active');
             $this->SetBuffer('StatusBuffer', 'inactive');
 		}
@@ -73,24 +71,8 @@
 		{
 			//Never delete this line!
 			parent::ApplyChanges();
-
-            if(('' != $this->ReadPropertyString('IP')) && ($this->ReadPropertyInteger('Period') > 0))
-            {
-                // hier fehlt noch Prüfung
-                $this->SetBuffer('StatusBuffer', 'active');
-                $this->SetTimerInterval('UpdateData', $this->ReadPropertyInteger('Period') * 1000);
-            }
-            else{
-                // Parameter nicht vollständig
-                $this->SetBuffer('StatusBuffer', 'inactive');
-                $this->SetTimerInterval('UpdateData', 0);
-            }
+            $this->validateConnectionAndStatus(boolval(GetValueBoolean($this->GetIDForIdent('Active'))));
 		}
-
-		public function ActivateUpdates()
-        {
-            //$this->SetTimerInterval('CheckIfDoneTimer', $this->ReadPropertyInteger('Period') * 1000);
-        }
 
         public function RequestAction($Ident, $Value)
         {
@@ -138,35 +120,35 @@
             SetValue($this->GetIDForIdent('TargetTemperature'), $targetTemperature);
             $this->SendCommand();
         }
-        public function SetTargetHumidity(integer $targetHumidity)
-        {
-            SetValue($this->GetIDForIdent('TargetTemperature'), $targetHumidity);
-            $this->SendCommand();
-        }
 
         public function SetActive(bool $Active)
         {
-            if ($this->ReadPropertyString('IP') == '') {
-                //Modul Deaktivieren
-                SetValue($this->GetIDForIdent('Active'), false);
-                echo 'No variable selected';
-                return false;
-            }
+            SetValue($this->GetIDForIdent('Active'), $Active);
+            $this->validateConnectionAndStatus($Active);
+            return true;
+        }
 
-            if ($Active) {
-                if (GetValue($this->ReadPropertyInteger('SourceID')) >= $this->ReadPropertyFloat('BorderValue')) {
-                    SetValue($this->GetIDForIdent('Status'), 1);
-                    $this->SetBuffer('StatusBuffer', 'Running');
+        private function validateConnectionAndStatus(bool $active)
+        {
+            if (($this->ReadPropertyString('IP') != "") && ($this->ReadPropertyInteger('Period') > 0)) {
+                if ($active) {
+                    if ($this->UpdateData() == true) {
+                        $this->SetBuffer('StatusBuffer', 'active');
+                        $this->SetTimerInterval('UpdateData', $this->ReadPropertyInteger('Period') * 1000);
+                    } else {
+                        $this->SetBuffer('StatusBuffer', 'error');
+                        $this->SetTimerInterval('UpdateData', 0);
+                    }
+
                 } else {
-                    SetValue($this->GetIDForIdent('Status'), 0);
+                    $this->SetBuffer('StatusBuffer', 'inactive');
+                    $this->SetTimerInterval('UpdateData', 0);
                 }
             } else {
-                SetValue($this->GetIDForIdent('Status'), 0);
+                // Parameter nicht vollständig
+                $this->SetBuffer('StatusBuffer', 'inactive');
+                $this->SetTimerInterval('UpdateData', 0);
             }
-
-            //Modul aktivieren
-            SetValue($this->GetIDForIdent('Active'), $Active);
-            return true;
         }
 
         public function SendCommand()
@@ -174,43 +156,15 @@
             if($this->GetBuffer('StatusBuffer') == 'active'){
                 $ip = $this->ReadPropertyString('IP');
                 $url = "http://$ip/aircon/set_control_info";
-                $power = GetValueBoolean($this->GetIDForIdent('Power'));
-                $mode = GetValueInteger($this->GetIDForIdent('FanMode'));
-                $fanspeed = GetValueInteger($this->GetIDForIdent('FanRate'));
-                $fandir = GetValueInteger($this->GetIDForIdent('FanDirection'));
-                $ttemp = GetValueFloat($this->GetIDForIdent('TargetTemperature'));
-                $thum = GetValueFloat($this->GetIDForIdent('TargetHumidity'));
-
-                if ( $power ) {
-                    $power = '1';
-                } else {
-                    $power = '0';
-                }
-
-                switch ( $fanspeed ) {
-                    case 0:
-                        $fanspeed = 'A';
-                        break;
-                    case 1:
-                        $fanspeed = 'B';
-                        break;
-                    case 2:
-                        $fanspeed = '3';
-                        break;
-                    case 3:
-                        $fanspeed = '4';
-                        break;
-                    case 4:
-                        $fanspeed = '5';
-                        break;
-                    case 5:
-                        $fanspeed = '6';
-                        break;
-                    case 6:
-                        $fanspeed = '7';
-                        break;
-                }
-                $data = array('pow' => strval($power), 'mode' => strval($mode), 'stemp' => strval($ttemp), 'shum' => '0', 'f_rate' => strval($fanspeed), 'f_dir' => strval($fandir));
+                $fanRatesRev = array(
+                    0 => "A", 1 => "B", 2 => "3", 3 => "4", 4 => "5", 5 => "6", 6 => "7");
+                $data = array(
+                    'pow' => strval(GetValueBoolean($this->GetIDForIdent('Power')) ? "1" : "0"),
+                    'mode' => strval(GetValueInteger($this->GetIDForIdent('FanMode'))),
+                    'stemp' => strval(GetValueFloat($this->GetIDForIdent('TargetTemperature'))),
+                    'shum' => '0',
+                    'f_rate' => strval($fanRatesRev[GetValueInteger($this->GetIDForIdent('FanRate'))]),
+                    'f_dir' => strval(GetValueInteger($this->GetIDForIdent('FanDirection'))));
                 $options = array(
                     'http' => array(
                         'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
@@ -224,17 +178,10 @@
             }
         }
 
-        public function UpdateData()
+        private function readDaikinACStatus(string $api): array
         {
             $ip = $this->ReadPropertyString('IP');
-
-            $result = file_get_contents("http://$ip/aircon/get_control_info");
-
-            //noch zu ergänzen: /aircon/get_sensor_info
-            //ret=OK,htemp=23.5,hhum=-,otemp=-,err=0,cmpfreq=0
-
-            echo $result;
-
+            $result = file_get_contents("http://$ip/aircon/$api");
             $data = explode(",", $result);
             $values = array();
             foreach ($data as $field)
@@ -244,118 +191,33 @@
             }
             print "Ergebnis:";
             print_r($values);
-            //echo $data[0]; //ret=       Daten Gültig
-            //echo $data[1]; //pow=       Anlage AN
-            //echo $data[2]; //mode=      Modus
-            //echo $data[3]; //adv=       ?
-            //echo $data[4]; //stemp=     Ziel Temperatur
-            //echo $data[5]; //shum=      Ziel Feuchte
-            //echo $data[6]; //dt1=       Ziel Temp / Mode
-            //echo $data[7]; //dt2=       Ziel Temp / Mode
-            //echo $data[8]; //dt3=       Ziel Temp / Mode
-            //echo $data[9]; //dt4=       Ziel Temp / Mode
-            //echo $data[10]; //dt5=      Ziel Temp / Mode
-            //echo $data[11]; //dt7=      Ziel Temp / Mode
-            //echo $data[12]; //dh1=      Ziel Feuchte / Mode
-            //echo $data[13]; //dh2=      Ziel Feuchte / Mode
-            //echo $data[14]; //dh3=      Ziel Feuchte / Mode
-            //echo $data[15]; //dh4=      Ziel Feuchte / Mode
-            //echo $data[16]; //dh5=      Ziel Feuchte / Mode
-            //echo $data[17]; //dh7=      Ziel Feuchte / Mode
-            //echo $data[18]; //dhh=      Ziel Feuchte / Mode
-            //echo $data[19]; //b_mode=
-            //echo $data[20]; //b_stemp=
-            //echo $data[21]; //b_shum=
-            //echo $data[22]; //alert=    Fehlercode
-            //echo $data[23]; //f_rate=   Lüfterstufe
-            //echo $data[24]; //f_dir=    Lüfter Schwenkmode
-            //echo $data[25]; //b_f_rate=
-            //echo $data[26]; //b_f_dir=
-            //echo $data[27]; //dfr1=
-            //echo $data[28]; //dfr2=
-            //echo $data[29]; //dfr3=
-            //echo $data[30]; //dfr4=
-            //echo $data[31]; //dfr5=
-            //echo $data[32]; //dfr6=
-            //echo $data[33]; //dfr7=
-            //echo $data[34]; //dfrh=
-            //echo $data[35]; //dfd1=
-            //echo $data[36]; //dfd2=
-            //echo $data[37]; //dfd3=
-            //echo $data[38]; //dfd4=
-            //echo $data[39]; //dfd5=
-            //echo $data[40]; //dfd6=
-            //echo $data[41]; //dfd7=
-            //echo $data[42]; //dfdh=
-
-
-            if ( $data[0] == "ret=OK" ) {
-                //echo "Daten Gültig!" ;
-                $power=substr($data[1],4,1);
-                SetValue($this->GetIDForIdent('Power'), intval($power));
-
-                $mode=substr($data[2],5,1);
-                SetValue($this->GetIDForIdent('FanMode'), intval($mode));
-
-                $stemp=substr($data[4],6,4);
-                if ( $stemp != "--" ) {
-                    SetValue($this->GetIDForIdent('TargetTemperature'), floatval($stemp));
-                }
-
-                $shum=substr($data[5],6,4);
-                SetValue($this->GetIDForIdent('TargetHumidity'), floatval($shum));
-
-                $frate=substr($data[23],7,1);
-                switch ($frate) {
-                    case 'A':
-                        $stufe=0;
-                        break;
-                    case 'B':
-                        $stufe=1;
-                        break;
-                    case '3':
-                        $stufe=2;
-                        break;
-                    case '4':
-                        $stufe=3;
-                        break;
-                    case '5':
-                        $stufe=4;
-                        break;
-                    case '6':
-                        $stufe=5;
-                        break;
-                    case '7':
-                        $stufe=6;
-                        break;
-                }
-                SetValue($this->GetIDForIdent('FanRate'), $stufe);
-
-                $fdir=substr($data[24],6,1);
-                SetValue($this->GetIDForIdent('FanDirection'), intval($fdir));
-
-
-            } else {
-
-                echo "Daten ungültig!";
-            }
-
+            return $values;
         }
 
-        public function MessageSink($TimeStamp, $SenderID, $Message, $Data)
+        public function UpdateData()
         {
-            IPS_LogMessage("MessageSink", "Message from SenderID ".$SenderID." with Message ".$Message."\r\n Data: ".print_r($Data, true));
-           // if (GetValue($this->GetIDForIdent('Active'))) {
-           //     if (($Data[0] < $this->ReadPropertyFloat('BorderValue')) && (GetValue($this->GetIDForIdent('Status')) == 1) && ($this->GetBuffer('StatusBuffer') == 'Running')) {
-           //         $this->SetTimerInterval('CheckIfDoneTimer', $this->ReadPropertyInteger('Period') * 1000);
-           //         $this->SetBuffer('StatusBuffer', 'Done');
-           //     } elseif ($Data[0] > $this->ReadPropertyFloat('BorderValue')) {
-           //         SetValue($this->GetIDForIdent('Status'), 1);
-           //         $this->SetTimerInterval('CheckIfDoneTimer', 0);
-           //         $this->SetBuffer('StatusBuffer', 'Running');
-           //     }
-          //  }
+            $values = readDaikinACStatus("get_sensor_info");
+            if($values["ret"]=="OK")
+            {
+                SetValue($this->GetIDForIdent('InsideTemperature'), floatval($values["htemp"]));
+            };
+
+            $values = readDaikinACStatus("get_control_info");
+            if($values["ret"]=="OK")
+            {
+                SetValue($this->GetIDForIdent('Power'), intval($values["pow"]));
+                SetValue($this->GetIDForIdent('FanMode'), intval($values["mode"]));
+                if($values["stemp"] != "--")
+                {
+                    SetValue($this->GetIDForIdent('TargetTemperature'), floatval($values["stemp"]));
+                }
+                $fanRates = array(
+                    "A" => 0, "B" => 1, "3" => 2, "4" => 3, "5" => 4, "6" => 5, "7" => 6);
+                SetValue($this->GetIDForIdent('FanRate'), $fanRates[$values["f_rate"]]);
+                SetValue($this->GetIDForIdent('FanDirection'), intval($values["f_dir"]));
+                return true;
+            } else {
+                echo false;
+            }
         }
-
-
 	}
