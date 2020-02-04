@@ -209,7 +209,7 @@
             $values = array();
             foreach ($data as $field)
             {
-                preg_match('/([^=])*=(.*)/', $field, $matches);
+                preg_match('/([^=]*)=(.*)/', $field, $matches);
                 $values[$matches[1]]=$matches[2];
             }
             print "Ergebnis:";
