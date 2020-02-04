@@ -89,7 +89,6 @@
                 case 'FanMode':
                 case 'TargetTemperature':
                     SetValue($this->GetIDForIdent($Ident), $Value);
-                    echo "Request Action started\n";
                     $this->SendCommand();
                     break;
                 case 'Active':
