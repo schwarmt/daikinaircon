@@ -128,11 +128,22 @@
             return true;
         }
 
+        public function CheckConnection()
+        {
+            $result = $this->validateConnectionAndStatus(true);
+            if($result == true){
+                SetValue($this->GetIDForIdent('Active'), true);
+            }
+
+        }
+
         private function validateConnectionAndStatus(bool $active)
         {
+            $success=false;
             if (($this->ReadPropertyString('IP') != "") && ($this->ReadPropertyInteger('Period') > 0)) {
                 if ($active) {
-                    if ($this->UpdateData() == true) {
+                    $success = $this->UpdateData();
+                    if ($success == true) {
                         $this->SetBuffer('StatusBuffer', 'active');
                         $this->SetTimerInterval('UpdateData', $this->ReadPropertyInteger('Period') * 1000);
                     } else {
@@ -149,6 +160,7 @@
                 $this->SetBuffer('StatusBuffer', 'inactive');
                 $this->SetTimerInterval('UpdateData', 0);
             }
+            return $success;
         }
 
         public function SendCommand()
