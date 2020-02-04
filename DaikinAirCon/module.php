@@ -73,8 +73,6 @@
 			parent::Destroy();
 		}
 
-		private function UpdateStatus(string $status)
-
 		public function ApplyChanges()
 		{
 			//Never delete this line!
@@ -103,17 +101,17 @@
             }
         }
 
-        public function SetFanDirection(integer $fanDirection)
+        public function SetFanDirection(int $fanDirection)
         {
             SetValue($this->GetIDForIdent('FanDirection'), $fanDirection);
             $this->SendCommand();
         }
-        public function SetFanRate(integer $fanRate)
+        public function SetFanRate(int $fanRate)
         {
             SetValue($this->GetIDForIdent('FanRate'), $fanRate);
             $this->SendCommand();
         }
-        public function SetFanMode(integer $fanMode)
+        public function SetFanMode(int $fanMode)
         {
             SetValue($this->GetIDForIdent('FanMode'), $fanMode);
             $this->SendCommand();
@@ -152,23 +150,23 @@
                 if ($active) {
                     $success = $this->UpdateData();
                     if ($success == true) {
-                        $this->UpdateStatus(self::STATUS_ACTIVE);
+                        $this->SetStatus(self::STATUS_ACTIVE);
                         //$this->SetBuffer('StatusBuffer', 'active');
                         $this->SetTimerInterval('UpdateData', $this->ReadPropertyInteger('Period') * 1000);
                     } else {
-                        $this->UpdateStatus(self::STATUS_ERROR);
+                        $this->SetStatus(self::STATUS_ERROR);
                         //$this->SetBuffer('StatusBuffer', 'error');
                         $this->SetTimerInterval('UpdateData', 0);
                     }
 
                 } else {
-                    $this->UpdateStatus(self::STATUS_INACTIVE);
+                    $this->SetStatus(self::STATUS_INACTIVE);
                    // $this->SetBuffer('StatusBuffer', 'inactive');
                     $this->SetTimerInterval('UpdateData', 0);
                 }
             } else {
                 // Parameter nicht vollständig
-                $this->UpdateStatus(self::STATUS_INACTIVE);
+                $this->SetStatus(self::STATUS_INACTIVE);
                 //$this->SetBuffer('StatusBuffer', 'inactive');
                 $this->SetTimerInterval('UpdateData', 0);
             }
