@@ -82,7 +82,6 @@
 
         public function RequestAction($Ident, $Value)
         {
-            echo "RequestAction";
             switch ($Ident) {
                 case 'Power':
                 case 'FanDirection':
