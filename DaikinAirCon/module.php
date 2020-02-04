@@ -12,7 +12,7 @@
 			parent::Create();
 
             //Properties
-            $this->RegisterPropertyString('IP', 0);
+            $this->RegisterPropertyString('IP', "");
             $this->RegisterPropertyInteger('Period', 120);
 
             //Timer
