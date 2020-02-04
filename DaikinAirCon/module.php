@@ -64,7 +64,6 @@
             $this->EnableAction('TargetTemperature');
             $this->EnableAction('Active');
             $this->SetStatus(self::STATUS_INACTIVE);
-            //$this->SetBuffer('StatusBuffer', 'inactive');
 		}
 
 		public function Destroy()
@@ -151,23 +150,19 @@
                     $success = $this->UpdateData();
                     if ($success == true) {
                         $this->SetStatus(self::STATUS_ACTIVE);
-                        //$this->SetBuffer('StatusBuffer', 'active');
                         $this->SetTimerInterval('UpdateData', $this->ReadPropertyInteger('Period') * 1000);
                     } else {
                         $this->SetStatus(self::STATUS_ERROR);
-                        //$this->SetBuffer('StatusBuffer', 'error');
                         $this->SetTimerInterval('UpdateData', 0);
                     }
 
                 } else {
                     $this->SetStatus(self::STATUS_INACTIVE);
-                   // $this->SetBuffer('StatusBuffer', 'inactive');
                     $this->SetTimerInterval('UpdateData', 0);
                 }
             } else {
                 // Parameter nicht vollständig
                 $this->SetStatus(self::STATUS_INACTIVE);
-                //$this->SetBuffer('StatusBuffer', 'inactive');
                 $this->SetTimerInterval('UpdateData', 0);
             }
             return $success;
@@ -176,7 +171,6 @@
         public function SendCommand()
         {
             if($this->GetStatus() == self::STATUS_ACTIVE){
-//            if($this->GetBuffer('StatusBuffer') == 'active'){
                 $ip = $this->ReadPropertyString('IP');
                 $url = "http://$ip/aircon/set_control_info";
                 $fanRatesRev = array(
@@ -212,8 +206,6 @@
                 preg_match('/([^=]*)=(.*)/', $field, $matches);
                 $values[$matches[1]]=$matches[2];
             }
-            print "Ergebnis:";
-            print_r($values);
             return $values;
         }
 
