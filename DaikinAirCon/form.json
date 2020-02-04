@@ -9,7 +9,7 @@
         {
             "type": "Button",
             "caption": "Check connection",
-            "onClick": "DAC_CheckConnection();"
+            "onClick": "DAC_CheckConnection($id);"
         }
     ],
     "status": [
